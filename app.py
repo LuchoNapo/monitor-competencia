@@ -148,7 +148,7 @@ h1, h2, h3, h4, h5 {
 /* Botón primario */
 .stButton > button {
     background: #FFFF00 !important;
-    color: #fff !important;
+    color: #000 !important;
     border: none !important;
     border-radius: 0 !important;
     font-family: 'Space Mono', monospace !important;
@@ -158,7 +158,7 @@ h1, h2, h3, h4, h5 {
     padding: 0.6rem 1.5rem !important;
     transition: background 0.15s !important;
 }
-.stButton > button:hover { background: #cc2222 !important; }
+.stButton > button:hover { background: #CCCC00 !important; }
 
 /* Inputs */
 .stTextInput > div > div > input,
