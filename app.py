@@ -11,7 +11,7 @@ from storage import (
 )
 
 # ── API keys desde secrets (nunca expuestas en UI) ─────────────────────────────
-GEMINI_KEY  = st.secrets.get("GEMINI_API_KEY",  os.getenv("GEMINI_API_KEY",  ""))
+GROQ_KEY = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", ""))
 META_TOKEN  = st.secrets.get("META_ACCESS_TOKEN", os.getenv("META_ACCESS_TOKEN", ""))
 META_COUNTRY = "AR"
 
@@ -184,7 +184,8 @@ h1, h2, h3, h4, h5 {
 .stRadio label:has(input:checked) { color: #fff !important; }
 
 /* Progress */
-.stProgress > div > div { background: #FFFF00 !important; }
+.stProgress > div > div > div { background: #FFFF00 !important; }
+.stProgress p { color: #aaa !important; font-family: "Space Mono", monospace !important; font-size: 0.65rem !important; letter-spacing: 0.1em !important; }
 
 /* Expander */
 .streamlit-expanderHeader {
@@ -244,11 +245,11 @@ with st.sidebar:
 
     # Status de config
     st.markdown("<br>", unsafe_allow_html=True)
-    gemini_ok = "🟢" if GEMINI_KEY else "🔴"
+    groq_ok = "🟢" if GROQ_KEY else "🔴"
     meta_ok   = "🟢" if META_TOKEN  else "🔴"
     st.markdown(f"""
     <div style='font-family:Space Mono,monospace;font-size:0.6rem;color:#444;text-transform:uppercase;letter-spacing:0.1em;line-height:2'>
-        {gemini_ok} GEMINI API<br>
+        {groq_ok} GROQ API<br>
         {meta_ok} META TOKEN
     </div>
     """, unsafe_allow_html=True)
@@ -271,8 +272,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Validación de keys
-if not GEMINI_KEY:
-    st.error("⚠ GEMINI_API_KEY no configurada en secrets. Contactá al administrador.")
+if not GROQ_KEY:
+    st.error("⚠ GROQ_API_KEY no configurada en secrets. Contactá al administrador.")
     st.stop()
 
 
@@ -401,11 +402,11 @@ elif page == "/ Escanear":
 
         save_scan(client["name"], {"scanned_at": datetime.now().isoformat(), "data": all_data})
 
-        progress.progress(step / total_steps, text="ANALYZING · GEMINI PROCESSING...")
+        progress.progress(step / total_steps, text="ANALYZING · GROQ PROCESSING...")
         prev = get_last_report(client["name"])
         prev_md = prev["report_markdown"] if prev else None
 
-        report = generate_report(client["name"], all_data, GEMINI_KEY, prev_md)
+        report = generate_report(client["name"], all_data, GROQ_KEY, prev_md)
         progress.progress(1.0, text="COMPLETE ●")
 
         if report["status"] == "ok":

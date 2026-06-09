@@ -1,12 +1,10 @@
 """
-Genera reportes de inteligencia competitiva usando Google Gemini API (gratuita).
-Modelo: gemini-2.0-flash — mismo que usa el bot de Slack de Paladini.
-SDK: google-genai (versión actual, reemplaza a google-generativeai)
+Genera reportes de inteligencia competitiva usando Groq API (gratuita).
+Modelo: llama-3.3-70b-versatile — rápido, contexto largo, free tier generoso.
 """
 import json
 from datetime import datetime
-from google import genai
-from google.genai import types
+from groq import Groq
 
 
 SYSTEM_PROMPT = """Sos un analista de inteligencia competitiva especializado en marketing digital latinoamericano.
@@ -25,9 +23,7 @@ def build_analysis_prompt(client_name: str, competitors_data: list, previous_rep
 --- FIN REPORTE ANTERIOR ---
 """
 
-    return f"""{SYSTEM_PROMPT}
-
-Analizá los siguientes datos de competidores del cliente "{client_name}".
+    return f"""Analizá los siguientes datos de competidores del cliente "{client_name}".
 {prev_context}
 DATOS RECOPILADOS:
 {data_str}
@@ -69,25 +65,26 @@ def generate_report(
     result = {
         "generated_at": datetime.now().isoformat(),
         "client_name": client_name,
-        "model": "gemini-2.0-flash",
+        "model": "llama-3.3-70b-versatile",
         "status": "ok",
         "report_markdown": "",
         "error": None,
     }
 
     try:
-        client = genai.Client(api_key=api_key)
+        client = Groq(api_key=api_key)
         prompt = build_analysis_prompt(client_name, competitors_data, previous_report)
 
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.4,
-                max_output_tokens=4096,
-            )
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user",   "content": prompt},
+            ],
+            temperature=0.4,
+            max_tokens=4096,
         )
-        result["report_markdown"] = response.text
+        result["report_markdown"] = response.choices[0].message.content
 
     except Exception as e:
         result["status"] = "error"
