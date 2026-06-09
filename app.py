@@ -57,7 +57,7 @@ h1, h2, h3, h4, h5 {
     font-family: 'Space Mono', monospace;
     font-size: 0.65rem;
     letter-spacing: 0.2em;
-    color: #e63333;
+    color: #FFFF00;
     text-transform: uppercase;
     margin-bottom: 0.4rem;
 }
@@ -112,7 +112,7 @@ h1, h2, h3, h4, h5 {
 /* Competitor card */
 .comp-card {
     border: 1px solid #1e1e1e;
-    border-left: 2px solid #e63333;
+    border-left: 2px solid #FFFF00;
     padding: 0.9rem 1.1rem;
     margin-bottom: 0.5rem;
     background: #0f0f0f;
@@ -120,7 +120,7 @@ h1, h2, h3, h4, h5 {
 .comp-card .roll {
     font-family: 'Space Mono', monospace;
     font-size: 0.6rem;
-    color: #e63333;
+    color: #FFFF00;
     letter-spacing: 0.15em;
     text-transform: uppercase;
     margin-bottom: 0.2rem;
@@ -147,7 +147,7 @@ h1, h2, h3, h4, h5 {
 
 /* Botón primario */
 .stButton > button {
-    background: #e63333 !important;
+    background: #FFFF00 !important;
     color: #fff !important;
     border: none !important;
     border-radius: 0 !important;
@@ -184,7 +184,7 @@ h1, h2, h3, h4, h5 {
 .stRadio label:has(input:checked) { color: #fff !important; }
 
 /* Progress */
-.stProgress > div > div { background: #e63333 !important; }
+.stProgress > div > div { background: #FFFF00 !important; }
 
 /* Expander */
 .streamlit-expanderHeader {
@@ -202,7 +202,7 @@ h1, h2, h3, h4, h5 {
 hr { border-color: #1e1e1e !important; }
 
 /* Info/success/error */
-.stAlert { border-radius: 0 !important; border-left: 2px solid #e63333 !important; background: #111 !important; }
+.stAlert { border-radius: 0 !important; border-left: 2px solid #FFFF00 !important; background: #111 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -218,7 +218,7 @@ if "current_report" not in st.session_state:
 with st.sidebar:
     st.markdown("""
     <div style='padding: 0.5rem 0 1.5rem'>
-        <div style='font-family: Space Mono, monospace; font-size: 0.6rem; letter-spacing: 0.2em; color: #e63333; text-transform: uppercase; margin-bottom: 0.3rem'>Aenima · Bound</div>
+        <div style='font-family: Space Mono, monospace; font-size: 0.6rem; letter-spacing: 0.2em; color: #FFFF00; text-transform: uppercase; margin-bottom: 0.3rem'>Aenima · Bound</div>
         <div style='font-family: Space Mono, monospace; font-size: 1rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.1em'>ARGOS</div>
         <div style='font-family: Space Mono, monospace; font-size: 0.6rem; color: #333; letter-spacing: 0.1em; text-transform: uppercase'>Monitor · v1.0</div>
     </div>
@@ -346,7 +346,7 @@ elif page == "/ Escanear":
     competitors = client["competitors"]
 
     st.markdown(f"""
-    <div style='font-family:Space Mono,monospace;font-size:0.6rem;color:#e63333;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.3rem'>
+    <div style='font-family:Space Mono,monospace;font-size:0.6rem;color:#FFFF00;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.3rem'>
         CLIENTE ACTIVO
     </div>
     <div style='font-family:Space Mono,monospace;font-size:1.3rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1.5rem'>
@@ -418,7 +418,7 @@ elif page == "/ Escanear":
     if st.session_state.current_report and st.session_state.current_report.get("report_markdown"):
         st.divider()
         st.markdown(f"""
-        <div style='font-family:Space Mono,monospace;font-size:0.6rem;color:#e63333;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:1rem'>
+        <div style='font-family:Space Mono,monospace;font-size:0.6rem;color:#FFFF00;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:1rem'>
             OUTPUT · REPORTE GENERADO
         </div>
         """, unsafe_allow_html=True)
@@ -445,7 +445,7 @@ elif page == "/ Reportes":
     client = st.session_state.clients[st.session_state.selected_client_idx]
 
     st.markdown(f"""
-    <div style='font-family:Space Mono,monospace;font-size:0.6rem;color:#e63333;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.3rem'>
+    <div style='font-family:Space Mono,monospace;font-size:0.6rem;color:#FFFF00;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.3rem'>
         HISTORIAL
     </div>
     <div style='font-family:Space Mono,monospace;font-size:1.3rem;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1.5rem'>
