@@ -54,9 +54,8 @@ class AtalayaCanvas(rl_canvas.Canvas):
     def _draw_page(self, page_num, total):
         self.saveState()
 
-        # Fondo blanco total
-        self.setFillColor(WHITE)
-        self.rect(0, 0, W, H, fill=1, stroke=0)
+        # NOTA: no se pinta fondo — el PDF ya es blanco por defecto.
+        # Pintar un rect aquí (en el render diferido) taparía el contenido.
 
         # ── HEADER ──
         # Línea amarilla gruesa en el tope
@@ -70,13 +69,13 @@ class AtalayaCanvas(rl_canvas.Canvas):
 
         # ATALAYA — texto negro, bold
         self.setFillColor(BLACK)
-        self.setFont("Helvetica-Bold", 7)
+        self.setFont("Helvetica-Bold", 8)
         self.drawString(15*mm, H - 10*mm, "ATALAYA")
 
-        # Separador puntito
+        # Subtítulo — separado, gris, con más aire
         self.setFillColor(GRAY)
-        self.setFont("Helvetica", 7)
-        self.drawString(15*mm + 28, H - 10*mm, "·  MONITOR DE COMPETENCIA")
+        self.setFont("Helvetica", 6.5)
+        self.drawString(40*mm, H - 10*mm, "MONITOR DE COMPETENCIA")
 
         # Cliente — derecha, gris
         self.setFillColor(GRAY)
