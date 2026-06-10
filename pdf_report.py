@@ -1,6 +1,6 @@
 """
 Genera PDF con estética Atalaya/Bound para reportes de inteligencia competitiva.
-Paleta: negro #0a0a0a, amarillo #FFFF00, blanco #FFFFFF, gris #555555
+Paleta: fondo blanco, texto negro, acentos amarillo #FFFF00 y negro #0a0a0a
 """
 import re
 import io
@@ -10,26 +10,26 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import mm
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+from reportlab.lib.enums import TA_LEFT, TA_CENTER
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, HRFlowable,
-    Table, TableStyle, PageBreak, KeepTogether
+    Table, TableStyle, PageBreak
 )
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas as rl_canvas
 
 # ── Colores ────────────────────────────────────────────────────────────────────
 BLACK   = colors.HexColor("#0a0a0a")
 YELLOW  = colors.HexColor("#FFFF00")
 WHITE   = colors.HexColor("#FFFFFF")
-GRAY    = colors.HexColor("#555555")
-DGRAY   = colors.HexColor("#222222")
-LGRAY   = colors.HexColor("#aaaaaa")
+GRAY    = colors.HexColor("#888888")
+LGRAY   = colors.HexColor("#cccccc")
+DGRAY   = colors.HexColor("#444444")
+OFFWHITE= colors.HexColor("#f5f5f5")
 
-W, H = A4  # 210 x 297 mm
+W, H = A4
 
-# ── Canvas con header/footer en cada página ────────────────────────────────────
+
+# ── Canvas con header/footer ───────────────────────────────────────────────────
 class AtalayaCanvas(rl_canvas.Canvas):
     def __init__(self, *args, client_name="", scan_date="", **kwargs):
         super().__init__(*args, **kwargs)
@@ -52,84 +52,82 @@ class AtalayaCanvas(rl_canvas.Canvas):
     def _draw_page(self, page_num, total):
         self.saveState()
 
-        # Fondo negro total
-        self.setFillColor(BLACK)
+        # Fondo blanco
+        self.setFillColor(WHITE)
         self.rect(0, 0, W, H, fill=1, stroke=0)
 
-        # Línea amarilla superior
-        self.setStrokeColor(YELLOW)
-        self.setLineWidth(1.5)
-        self.line(15*mm, H - 12*mm, W - 15*mm, H - 12*mm)
+        # Banda negra superior
+        self.setFillColor(BLACK)
+        self.rect(0, H - 14*mm, W, 14*mm, fill=1, stroke=0)
 
-        # Header izquierda
+        # Texto header izquierda — amarillo sobre negro
         self.setFillColor(YELLOW)
         self.setFont("Helvetica-Bold", 6)
-        self.drawString(15*mm, H - 9*mm, "ATALAYA · MONITOR DE COMPETENCIA")
+        self.drawString(15*mm, H - 8.5*mm, "ATALAYA · MONITOR DE COMPETENCIA")
 
-        # Header derecha — cliente
+        # Texto header derecha — gris sobre negro
         self.setFillColor(LGRAY)
         self.setFont("Helvetica", 6)
-        txt = self.client_name.upper()
-        self.drawRightString(W - 15*mm, H - 9*mm, txt)
+        self.drawRightString(W - 15*mm, H - 8.5*mm, self.client_name.upper())
 
-        # Línea footer
-        self.setStrokeColor(DGRAY)
+        # Línea amarilla debajo del header
+        self.setStrokeColor(YELLOW)
+        self.setLineWidth(2)
+        self.line(0, H - 14*mm, W, H - 14*mm)
+
+        # Footer — línea gris clara
+        self.setStrokeColor(LGRAY)
         self.setLineWidth(0.5)
         self.line(15*mm, 12*mm, W - 15*mm, 12*mm)
 
-        # Footer izquierda
         self.setFillColor(GRAY)
         self.setFont("Helvetica", 6)
         self.drawString(15*mm, 8*mm, f"AENIMA · BOUND · {self.scan_date}")
-
-        # Footer derecha — paginado
         self.drawRightString(W - 15*mm, 8*mm, f"{page_num:02d} / {total:02d}")
 
         self.restoreState()
 
 
 def _make_styles():
-    base = dict(fontName="Helvetica", textColor=WHITE, backColor=BLACK)
-
     cover_eyebrow = ParagraphStyle("cover_eyebrow",
-        fontName="Helvetica-Bold", fontSize=7, textColor=YELLOW,
-        spaceAfter=4, leading=10, letterSpacing=3)
+        fontName="Helvetica-Bold", fontSize=7, textColor=GRAY,
+        spaceAfter=4, leading=10, letterSpacing=2)
 
     cover_title = ParagraphStyle("cover_title",
-        fontName="Helvetica-Bold", fontSize=36, textColor=WHITE,
-        spaceAfter=6, leading=40)
+        fontName="Helvetica-Bold", fontSize=40, textColor=BLACK,
+        spaceAfter=4, leading=44)
 
     cover_sub = ParagraphStyle("cover_sub",
-        fontName="Helvetica", fontSize=9, textColor=GRAY,
+        fontName="Helvetica", fontSize=10, textColor=GRAY,
         spaceAfter=4, leading=14)
 
     section_label = ParagraphStyle("section_label",
-        fontName="Helvetica-Bold", fontSize=6, textColor=YELLOW,
-        spaceAfter=3, leading=9, letterSpacing=2)
+        fontName="Helvetica-Bold", fontSize=6, textColor=GRAY,
+        spaceAfter=2, leading=9, letterSpacing=2)
 
     h1 = ParagraphStyle("h1",
-        fontName="Helvetica-Bold", fontSize=16, textColor=WHITE,
-        spaceBefore=14, spaceAfter=6, leading=20)
+        fontName="Helvetica-Bold", fontSize=18, textColor=BLACK,
+        spaceBefore=12, spaceAfter=6, leading=22)
 
     h2 = ParagraphStyle("h2",
-        fontName="Helvetica-Bold", fontSize=11, textColor=YELLOW,
-        spaceBefore=12, spaceAfter=4, leading=15)
+        fontName="Helvetica-Bold", fontSize=12, textColor=BLACK,
+        spaceBefore=12, spaceAfter=4, leading=16)
 
     h3 = ParagraphStyle("h3",
-        fontName="Helvetica-Bold", fontSize=9, textColor=WHITE,
-        spaceBefore=8, spaceAfter=3, leading=13)
+        fontName="Helvetica-Bold", fontSize=10, textColor=BLACK,
+        spaceBefore=8, spaceAfter=3, leading=14)
 
     body = ParagraphStyle("body",
-        fontName="Helvetica", fontSize=8.5, textColor=LGRAY,
-        spaceAfter=5, leading=13)
+        fontName="Helvetica", fontSize=9, textColor=DGRAY,
+        spaceAfter=5, leading=14)
 
     bullet = ParagraphStyle("bullet",
-        fontName="Helvetica", fontSize=8.5, textColor=LGRAY,
-        spaceAfter=3, leading=13, leftIndent=12, bulletIndent=0)
+        fontName="Helvetica", fontSize=9, textColor=DGRAY,
+        spaceAfter=3, leading=14, leftIndent=14)
 
     bold_label = ParagraphStyle("bold_label",
-        fontName="Helvetica-Bold", fontSize=8.5, textColor=WHITE,
-        spaceAfter=3, leading=13)
+        fontName="Helvetica-Bold", fontSize=9, textColor=BLACK,
+        spaceAfter=3, leading=14)
 
     meta = ParagraphStyle("meta",
         fontName="Helvetica", fontSize=7, textColor=GRAY,
@@ -143,12 +141,17 @@ def _make_styles():
     )
 
 
-def _hr(color=DGRAY, thickness=0.5):
-    return HRFlowable(width="100%", thickness=thickness, color=color, spaceAfter=6, spaceBefore=6)
+def _hr(color=LGRAY, thickness=0.5):
+    return HRFlowable(width="100%", thickness=thickness, color=color,
+                      spaceAfter=6, spaceBefore=4)
+
+
+def _hr_yellow():
+    return HRFlowable(width="100%", thickness=2, color=YELLOW,
+                      spaceAfter=8, spaceBefore=4)
 
 
 def _parse_markdown(md_text: str, styles: dict) -> list:
-    """Convierte markdown básico a flowables de ReportLab."""
     story = []
     lines = md_text.split("\n")
     i = 0
@@ -161,41 +164,52 @@ def _parse_markdown(md_text: str, styles: dict) -> list:
             i += 1
             continue
 
-        # H1
         if line.startswith("# "):
             text = line[2:].strip()
-            story.append(Spacer(1, 6))
-            story.append(_hr(YELLOW, 1))
-            story.append(Paragraph(text.upper(), styles["h1"]))
-            story.append(_hr(DGRAY))
-            i += 1
-            continue
-
-        # H2
-        if line.startswith("## "):
-            text = line[3:].strip()
             story.append(Spacer(1, 4))
-            story.append(Paragraph(f"// {text.upper()}", styles["h2"]))
+            story.append(_hr_yellow())
+            story.append(Paragraph(text.upper(), styles["h1"]))
             story.append(_hr())
             i += 1
             continue
 
-        # H3
-        if line.startswith("### "):
-            text = line[4:].strip()
+        if line.startswith("## "):
+            text = line[3:].strip()
             story.append(Spacer(1, 4))
-            story.append(Paragraph(f"[ {text.upper()} ]", styles["h3"]))
+            story.append(Paragraph(text.upper(), styles["h2"]))
+            story.append(_hr())
             i += 1
             continue
 
-        # Bullet con bold label (- **Label:** texto)
+        if line.startswith("### "):
+            text = line[4:].strip()
+            story.append(Spacer(1, 4))
+            # Caja negra con texto blanco para nombre del competidor
+            comp_data = [[Paragraph(f"  {text.upper()}", ParagraphStyle(
+                "comp_header",
+                fontName="Helvetica-Bold", fontSize=9,
+                textColor=WHITE, leading=14
+            ))]]
+            comp_table = Table(comp_data, colWidths=[170*mm])
+            comp_table.setStyle(TableStyle([
+                ("BACKGROUND", (0,0), (-1,-1), BLACK),
+                ("TOPPADDING",    (0,0), (-1,-1), 6),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 6),
+                ("LEFTPADDING",   (0,0), (-1,-1), 8),
+            ]))
+            story.append(comp_table)
+            story.append(Spacer(1, 4))
+            i += 1
+            continue
+
+        # Bullet con bold label
         if line.startswith("- **") and ":**" in line:
             match = re.match(r"- \*\*(.+?):\*\*\s*(.*)", line)
             if match:
                 label = match.group(1)
                 rest  = match.group(2)
-                text  = f"<b><font color='#FFFFFF'>· {label}:</font></b> {rest}"
-                story.append(Paragraph(text, styles["bullet"]))
+                text  = f"<b>{label}:</b> {rest}"
+                story.append(Paragraph(f"· {text}", styles["bullet"]))
                 i += 1
                 continue
 
@@ -207,15 +221,8 @@ def _parse_markdown(md_text: str, styles: dict) -> list:
             i += 1
             continue
 
-        # Bold standalone **texto**
-        if line.startswith("**") and line.endswith("**"):
-            text = line[2:-2]
-            story.append(Paragraph(text, styles["bold_label"]))
-            i += 1
-            continue
-
-        # Línea normal — procesar bold inline
-        text = re.sub(r"\*\*(.+?)\*\*", r"<b><font color='#FFFFFF'>\1</font></b>", line)
+        # Línea normal
+        text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", line)
         story.append(Paragraph(text, styles["body"]))
         i += 1
 
@@ -228,11 +235,10 @@ def generate_pdf(
     scan_date: str = None,
     competitors: list = None
 ) -> bytes:
-    """
-    Genera el PDF y devuelve bytes para st.download_button.
-    """
     if not scan_date:
         scan_date = datetime.now().strftime("%d.%m.%Y")
+    if competitors is None:
+        competitors = []
 
     buffer = io.BytesIO()
     styles = _make_styles()
@@ -242,7 +248,7 @@ def generate_pdf(
         pagesize=A4,
         leftMargin=20*mm,
         rightMargin=20*mm,
-        topMargin=20*mm,
+        topMargin=22*mm,
         bottomMargin=20*mm,
         title=f"Atalaya · {client_name}",
         author="Aenima Agency",
@@ -251,78 +257,80 @@ def generate_pdf(
     story = []
 
     # ── PORTADA ────────────────────────────────────────────────────────────────
-    story.append(Spacer(1, 30*mm))
+    story.append(Spacer(1, 20*mm))
+
+    # Banda amarilla decorativa
+    banda = Table([[""]], colWidths=[170*mm], rowHeights=[3])
+    banda.setStyle(TableStyle([("BACKGROUND", (0,0), (-1,-1), YELLOW)]))
+    story.append(banda)
+    story.append(Spacer(1, 8*mm))
 
     story.append(Paragraph("AENIMA · INTELIGENCIA COMPETITIVA", styles["cover_eyebrow"]))
-    story.append(Spacer(1, 4))
-
-    story.append(Paragraph("ATALAYA", styles["cover_title"]))
     story.append(Spacer(1, 2))
-
+    story.append(Paragraph("ATALAYA", styles["cover_title"]))
     story.append(Paragraph("MONITOR DE COMPETENCIA", styles["cover_sub"]))
     story.append(Spacer(1, 8*mm))
 
-    story.append(_hr(YELLOW, 1))
-    story.append(Spacer(1, 4*mm))
+    story.append(_hr(LGRAY))
+    story.append(Spacer(1, 4))
 
-    # Info del reporte en tabla
+    # Tabla de info
     info_data = [
-        [Paragraph("CLIENTE", styles["section_label"]),
-         Paragraph(client_name.upper(), styles["h3"])],
-        [Paragraph("FECHA", styles["section_label"]),
-         Paragraph(scan_date, styles["body"])],
-        [Paragraph("COMPETIDORES", styles["section_label"]),
-         Paragraph(str(len(competitors)) if competitors else "—", styles["body"])],
-        [Paragraph("MODELO", styles["section_label"]),
+        [Paragraph("CLIENTE",       styles["section_label"]),
+         Paragraph(client_name.upper(), styles["bold_label"])],
+        [Paragraph("FECHA",         styles["section_label"]),
+         Paragraph(scan_date,           styles["body"])],
+        [Paragraph("COMPETIDORES",  styles["section_label"]),
+         Paragraph(str(len(competitors)), styles["body"])],
+        [Paragraph("MODELO",        styles["section_label"]),
          Paragraph("LLAMA 3.3 · 70B · GROQ", styles["body"])],
     ]
-    info_table = Table(info_data, colWidths=[35*mm, 120*mm])
+    info_table = Table(info_data, colWidths=[35*mm, 135*mm])
     info_table.setStyle(TableStyle([
-        ("BACKGROUND",  (0,0), (-1,-1), BLACK),
-        ("TEXTCOLOR",   (0,0), (-1,-1), WHITE),
-        ("ROWBACKGROUNDS", (0,0), (-1,-1), [BLACK, DGRAY]),
-        ("TOPPADDING",  (0,0), (-1,-1), 5),
-        ("BOTTOMPADDING",(0,0), (-1,-1), 5),
-        ("LEFTPADDING", (0,0), (-1,-1), 4),
-        ("LINEBELOW",   (0,0), (-1,-1), 0.3, DGRAY),
+        ("BACKGROUND",    (0,0), (-1,-1), WHITE),
+        ("ROWBACKGROUNDS",(0,0), (-1,-1), [WHITE, OFFWHITE]),
+        ("TOPPADDING",    (0,0), (-1,-1), 5),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+        ("LEFTPADDING",   (0,0), (-1,-1), 4),
+        ("LINEBELOW",     (0,0), (-1,-1), 0.3, LGRAY),
     ]))
     story.append(info_table)
-
     story.append(Spacer(1, 8*mm))
-    story.append(_hr(DGRAY))
 
-    # Lista de competidores en portada
+    # Lista de competidores
     if competitors:
-        story.append(Spacer(1, 4))
         story.append(Paragraph("COMPETIDORES ANALIZADOS", styles["section_label"]))
-        story.append(Spacer(1, 2))
+        story.append(Spacer(1, 3))
         for idx, comp in enumerate(competitors):
-            name = comp.get("name", "").upper()
-            url  = comp.get("url", "")
-            fb   = comp.get("facebook_page", "")
-            meta_str = f" · FB: {fb}" if fb else ""
-            url_str  = f" · {url}"    if url  else ""
+            name    = comp.get("name", "").upper()
+            url     = comp.get("url", "")
+            fb      = comp.get("facebook_page", "")
+            details = []
+            if url: details.append(url)
+            if fb:  details.append(f"FB: {fb}")
+            detail_str = "  ·  ".join(details)
             story.append(Paragraph(
-                f"<b><font color='#FFFF00'>{idx+1:02d}</font></b>  {name}{url_str}{meta_str}",
+                f"<b>{idx+1:02d}  {name}</b>  <font color='#888888'>{detail_str}</font>",
                 styles["body"]
             ))
 
     story.append(PageBreak())
 
-    # ── CONTENIDO DEL REPORTE ──────────────────────────────────────────────────
-    content_story = _parse_markdown(report_markdown, styles)
-    story.extend(content_story)
+    # ── CONTENIDO ──────────────────────────────────────────────────────────────
+    story.extend(_parse_markdown(report_markdown, styles))
 
     # ── PÁGINA FINAL ───────────────────────────────────────────────────────────
     story.append(PageBreak())
     story.append(Spacer(1, 60*mm))
-    story.append(_hr(YELLOW, 1))
+
+    banda2 = Table([[""]], colWidths=[170*mm], rowHeights=[3])
+    banda2.setStyle(TableStyle([("BACKGROUND", (0,0), (-1,-1), YELLOW)]))
+    story.append(banda2)
     story.append(Spacer(1, 6))
     story.append(Paragraph("ATALAYA · MONITOR DE COMPETENCIA", styles["cover_eyebrow"]))
     story.append(Paragraph("AENIMA AGENCY · BOUND", styles["cover_sub"]))
     story.append(Paragraph(f"Generado el {scan_date}", styles["meta"]))
 
-    # Build
     def make_canvas(filename, doc=None, **kwargs):
         return AtalayaCanvas(
             filename,
