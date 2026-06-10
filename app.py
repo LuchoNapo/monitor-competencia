@@ -17,7 +17,7 @@ META_COUNTRY = "AR"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="ARGOS · Monitor",
+    page_title="ATALAYA · Monitor",
     page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -220,7 +220,7 @@ with st.sidebar:
     st.markdown("""
     <div style='padding: 0.5rem 0 1.5rem'>
         <div style='font-family: Space Mono, monospace; font-size: 0.6rem; letter-spacing: 0.2em; color: #FFFF00; text-transform: uppercase; margin-bottom: 0.3rem'>Aenima · Bound</div>
-        <div style='font-family: Space Mono, monospace; font-size: 1rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.1em'>ARGOS</div>
+        <div style='font-family: Space Mono, monospace; font-size: 1rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.1em'>ATALAYA</div>
         <div style='font-family: Space Mono, monospace; font-size: 0.6rem; color: #333; letter-spacing: 0.1em; text-transform: uppercase'>Monitor · v1.0</div>
     </div>
     """, unsafe_allow_html=True)
@@ -266,7 +266,7 @@ with st.sidebar:
 st.markdown(f"""
 <div class="bound-header">
     <div class="eyebrow">Aenima · Inteligencia Competitiva</div>
-    <h1>ARGOS · Monitor</h1>
+    <h1>ATALAYA · Monitor</h1>
     <div class="sub">SCAN / ANALYZE / REPORT &nbsp;·&nbsp; {datetime.now().strftime("%d.%m.%Y")}</div>
 </div>
 """, unsafe_allow_html=True)
@@ -427,11 +427,18 @@ elif page == "/ Escanear":
             f'<div class="report-wrap">{st.session_state.current_report["report_markdown"]}</div>',
             unsafe_allow_html=True
         )
+        from pdf_report import generate_pdf
+        pdf_bytes = generate_pdf(
+            client["name"],
+            st.session_state.current_report["report_markdown"],
+            datetime.now().strftime("%d.%m.%Y"),
+            client.get("competitors", [])
+        )
         st.download_button(
-            "↓ DESCARGAR REPORTE",
-            data=st.session_state.current_report["report_markdown"],
-            file_name=f"argos_{client['name'].lower().replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.md",
-            mime="text/markdown"
+            "↓ DESCARGAR PDF",
+            data=pdf_bytes,
+            file_name=f"atalaya_{client['name'].lower().replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.pdf",
+            mime="application/pdf"
         )
 
 
@@ -472,9 +479,16 @@ elif page == "/ Reportes":
             md = data.get("report_markdown", "")
             if md:
                 st.markdown(f'<div class="report-wrap">{md}</div>', unsafe_allow_html=True)
+                from pdf_report import generate_pdf
+                pdf_bytes = generate_pdf(
+                    client["name"],
+                    md,
+                    data.get("generated_at", "")[:10].replace("-", "."),
+                    client.get("competitors", [])
+                )
                 st.download_button(
-                    "↓ DESCARGAR",
-                    data=md,
-                    file_name=f"argos_{selected_path.split('/')[-1].replace('.json','.md')}",
-                    mime="text/markdown"
+                    "↓ DESCARGAR PDF",
+                    data=pdf_bytes,
+                    file_name=f"atalaya_{selected_path.split('/')[-1].replace('.json','.pdf')}",
+                    mime="application/pdf"
                 )
