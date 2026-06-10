@@ -17,6 +17,9 @@ GROQ_KEY = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", ""))
 META_TOKEN  = st.secrets.get("META_ACCESS_TOKEN", os.getenv("META_ACCESS_TOKEN", ""))
 META_COUNTRY = "AR"
 
+# Diagnóstico técnico: poné SHOW_DIAGNOSTICS = "true" en secrets para ver errores de Meta
+SHOW_DIAGNOSTICS = str(st.secrets.get("SHOW_DIAGNOSTICS", os.getenv("SHOW_DIAGNOSTICS", "false"))).lower() == "true"
+
 # ── Ícono de la app (torre de vigilancia amarilla) ─────────────────────────────
 _icon_path = Path(__file__).parent / "assets" / "atalaya_icon.png"
 PAGE_ICON = Image.open(_icon_path) if _icon_path.exists() else "🗼"
@@ -385,6 +388,7 @@ elif page == "/ Escanear":
 
     if run_scan:
         all_data = []
+        meta_errors = []
         total_steps = len(competitors) * (int(do_web) + int(do_meta)) + 1
         step = 0
         progress = st.progress(0, text="")
@@ -403,13 +407,13 @@ elif page == "/ Escanear":
                     text=f"SCAN · {comp['name'].upper()} · META ADS")
                 meta_result = get_meta_ads(comp["facebook_page"], META_TOKEN, META_COUNTRY)
                 comp_data["meta_ads"] = meta_result
-                # Mostrar diagnóstico si hubo error de Meta
+                # Acumular errores de Meta para mostrarlos juntos al final
                 if meta_result.get("status") == "error":
                     code = meta_result.get("error_code")
                     hint = meta_result.get("error_hint", "")
                     msg  = meta_result.get("error", "")
                     detalle = f"código {code}: {msg}" if code else msg
-                    st.warning(f"⚠ Meta Ads ({comp['name']}): {detalle}" + (f" → {hint}" if hint else ""))
+                    meta_errors.append(f"{comp['name']}: {detalle}" + (f" → {hint}" if hint else ""))
                 step += 1
 
             all_data.append(comp_data)
@@ -429,6 +433,12 @@ elif page == "/ Escanear":
             st.success("SCAN COMPLETO · Reporte generado")
         else:
             st.error(f"ERROR · {report['error']}")
+
+        # Diagnóstico técnico de Meta — plegado, discreto (solo si SHOW_DIAGNOSTICS)
+        if meta_errors and SHOW_DIAGNOSTICS:
+            with st.expander(f"⚙ Diagnóstico técnico · {len(meta_errors)} avisos de Meta Ads"):
+                for err in meta_errors:
+                    st.caption(f"· {err}")
 
     if st.session_state.current_report and st.session_state.current_report.get("report_markdown"):
         st.divider()
