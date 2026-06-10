@@ -1,6 +1,8 @@
 import streamlit as st
 import os
 from datetime import datetime
+from pathlib import Path
+from PIL import Image
 
 from scrapers.web_scraper import scrape_website
 from scrapers.meta_ads import get_meta_ads
@@ -15,10 +17,14 @@ GROQ_KEY = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", ""))
 META_TOKEN  = st.secrets.get("META_ACCESS_TOKEN", os.getenv("META_ACCESS_TOKEN", ""))
 META_COUNTRY = "AR"
 
+# ── Ícono de la app (torre de vigilancia amarilla) ─────────────────────────────
+_icon_path = Path(__file__).parent / "assets" / "atalaya_icon.png"
+PAGE_ICON = Image.open(_icon_path) if _icon_path.exists() else "🗼"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="ATALAYA · Monitor",
-    page_icon="🔍",
+    page_icon=PAGE_ICON,
     layout="wide",
     initial_sidebar_state="expanded",
 )
