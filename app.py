@@ -401,7 +401,15 @@ elif page == "/ Escanear":
             if do_meta and META_TOKEN and comp.get("facebook_page"):
                 progress.progress(step / total_steps,
                     text=f"SCAN · {comp['name'].upper()} · META ADS")
-                comp_data["meta_ads"] = get_meta_ads(comp["facebook_page"], META_TOKEN, META_COUNTRY)
+                meta_result = get_meta_ads(comp["facebook_page"], META_TOKEN, META_COUNTRY)
+                comp_data["meta_ads"] = meta_result
+                # Mostrar diagnóstico si hubo error de Meta
+                if meta_result.get("status") == "error":
+                    code = meta_result.get("error_code")
+                    hint = meta_result.get("error_hint", "")
+                    msg  = meta_result.get("error", "")
+                    detalle = f"código {code}: {msg}" if code else msg
+                    st.warning(f"⚠ Meta Ads ({comp['name']}): {detalle}" + (f" → {hint}" if hint else ""))
                 step += 1
 
             all_data.append(comp_data)
