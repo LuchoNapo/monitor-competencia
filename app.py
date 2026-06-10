@@ -21,6 +21,77 @@ META_COUNTRY = "AR"
 _icon_path = Path(__file__).parent / "assets" / "atalaya_icon.png"
 PAGE_ICON = Image.open(_icon_path) if _icon_path.exists() else "🗼"
 
+
+# ── Traductor de errores técnicos a mensajes amigables ─────────────────────────
+def parse_error(error_msg: str) -> dict:
+    """Convierte un error técnico en un mensaje claro para el usuario."""
+    import re
+    msg = str(error_msg).lower()
+
+    # Límite de tokens/rate limit de Groq
+    if "rate_limit" in msg or "429" in msg or "tokens per day" in msg:
+        # Intentar extraer el tiempo de espera (ej: "1h14m34s")
+        wait = re.search(r"try again in (?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?", msg)
+        tiempo = ""
+        if wait:
+            h, m, s = wait.groups()
+            partes = []
+            if h: partes.append(f"{h}h")
+            if m: partes.append(f"{m}m")
+            if s: partes.append(f"{int(float(s))}s")
+            tiempo = " ".join(partes)
+        return {
+            "titulo": "Límite diario alcanzado",
+            "detalle": "Se alcanzó el cupo de análisis por hoy. El servicio se reinicia automáticamente."
+                       + (f" Volvé a intentar en {tiempo}." if tiempo else " Probá de nuevo más tarde."),
+            "icono": "◷",
+        }
+
+    # Token inválido
+    if "invalid" in msg and ("token" in msg or "api" in msg or "key" in msg):
+        return {
+            "titulo": "Configuración de acceso",
+            "detalle": "Hay un problema con las credenciales del servicio. Contactá al administrador.",
+            "icono": "⚿",
+        }
+
+    # Timeout / conexión
+    if "timeout" in msg or "connection" in msg:
+        return {
+            "titulo": "Problema de conexión",
+            "detalle": "No se pudo conectar con el servicio de análisis. Revisá tu conexión y reintentá.",
+            "icono": "⚡",
+        }
+
+    # Genérico
+    return {
+        "titulo": "No se pudo completar el análisis",
+        "detalle": "Ocurrió un inconveniente al generar el reporte. Probá de nuevo en unos minutos.",
+        "icono": "✕",
+    }
+
+
+def render_error_card(error_msg: str):
+    """Muestra una tarjeta de error con estética Atalaya."""
+    info = parse_error(error_msg)
+    print(f"[ERROR REPORTE] {error_msg}")  # detalle técnico a consola
+    st.markdown(f"""
+    <div style='border:1px solid #1e1e1e; border-left:3px solid #FFFF00; background:#0f0f0f;
+                padding:1.3rem 1.5rem; margin-top:1rem; font-family:Inter,sans-serif'>
+        <div style='font-family:Space Mono,monospace; font-size:1.4rem; color:#FFFF00; margin-bottom:0.4rem'>
+            {info['icono']}
+        </div>
+        <div style='font-family:Space Mono,monospace; font-size:0.85rem; color:#fff;
+                    text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.4rem'>
+            {info['titulo']}
+        </div>
+        <div style='font-size:0.85rem; color:#999; line-height:1.6'>
+            {info['detalle']}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="ATALAYA · Monitor",
@@ -429,7 +500,7 @@ elif page == "/ Escanear":
             st.session_state.current_report = report
             st.success("SCAN COMPLETO · Reporte generado")
         else:
-            st.error(f"ERROR · {report['error']}")
+            render_error_card(report['error'])
 
         # Estado de Meta Ads: ícono discreto en pantalla + detalle en consola (logs)
         if do_meta and META_TOKEN:
