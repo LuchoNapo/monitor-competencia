@@ -17,9 +17,6 @@ GROQ_KEY = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", ""))
 META_TOKEN  = st.secrets.get("META_ACCESS_TOKEN", os.getenv("META_ACCESS_TOKEN", ""))
 META_COUNTRY = "AR"
 
-# Diagnóstico técnico: poné SHOW_DIAGNOSTICS = "true" en secrets para ver errores de Meta
-SHOW_DIAGNOSTICS = str(st.secrets.get("SHOW_DIAGNOSTICS", os.getenv("SHOW_DIAGNOSTICS", "false"))).lower() == "true"
-
 # ── Ícono de la app (torre de vigilancia amarilla) ─────────────────────────────
 _icon_path = Path(__file__).parent / "assets" / "atalaya_icon.png"
 PAGE_ICON = Image.open(_icon_path) if _icon_path.exists() else "🗼"
@@ -434,11 +431,29 @@ elif page == "/ Escanear":
         else:
             st.error(f"ERROR · {report['error']}")
 
-        # Diagnóstico técnico de Meta — plegado, discreto (solo si SHOW_DIAGNOSTICS)
-        if meta_errors and SHOW_DIAGNOSTICS:
-            with st.expander(f"⚙ Diagnóstico técnico · {len(meta_errors)} avisos de Meta Ads"):
+        # Estado de Meta Ads: ícono discreto en pantalla + detalle en consola (logs)
+        if do_meta and META_TOKEN:
+            if meta_errors:
+                # Log completo a la consola de Streamlit Cloud
+                print("=" * 60)
+                print(f"[META ADS] {len(meta_errors)} error(es) en el scan de {client['name']}:")
                 for err in meta_errors:
-                    st.caption(f"· {err}")
+                    print(f"  · {err}")
+                print("=" * 60)
+                # En pantalla: solo un ícono con tooltip
+                st.markdown(
+                    f"<div style='font-family:Space Mono,monospace;font-size:0.62rem;color:#888;letter-spacing:0.1em;margin-top:0.5rem' "
+                    f"title='{len(meta_errors)} avisos de Meta Ads. Ver detalle en logs.'>"
+                    f"◆ META ADS · sin datos ({len(meta_errors)})</div>",
+                    unsafe_allow_html=True
+                )
+            else:
+                # Todo ok
+                st.markdown(
+                    "<div style='font-family:Space Mono,monospace;font-size:0.62rem;color:#1a9d4a;letter-spacing:0.1em;margin-top:0.5rem'>"
+                    "◆ META ADS · OK</div>",
+                    unsafe_allow_html=True
+                )
 
     if st.session_state.current_report and st.session_state.current_report.get("report_markdown"):
         st.divider()
