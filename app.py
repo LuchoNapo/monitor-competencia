@@ -331,6 +331,52 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
+    # ── Medidor de uso diario (Groq) ──
+    rl = st.session_state.get("last_rate_limit")
+    if rl and rl.get("remaining_tokens") and rl.get("limit_tokens"):
+        try:
+            rem   = int(rl["remaining_tokens"])
+            lim   = int(rl["limit_tokens"])
+            usado = lim - rem
+            pct   = max(0, min(100, int(rem / lim * 100)))
+            # Estimar reportes restantes (~12k tokens c/u)
+            reportes_rest = rem // 12000
+            # Color según nivel
+            if pct > 40:
+                barra_color = "#FFFF00"
+            elif pct > 15:
+                barra_color = "#FFA500"
+            else:
+                barra_color = "#FF4444"
+
+            st.markdown(f"""
+            <div style='margin-top:1rem;padding-top:0.8rem;border-top:1px solid #1e1e1e'>
+                <div style='font-family:Space Mono,monospace;font-size:0.58rem;color:#666;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.4rem'>
+                    USO DIARIO · GROQ
+                </div>
+                <div style='background:#1a1a1a;height:6px;width:100%;margin-bottom:0.4rem'>
+                    <div style='background:{barra_color};height:6px;width:{pct}%'></div>
+                </div>
+                <div style='font-family:Space Mono,monospace;font-size:0.58rem;color:#888;letter-spacing:0.05em;line-height:1.6'>
+                    {rem:,} / {lim:,} tokens<br>
+                    ~{reportes_rest} reportes restantes
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        except (ValueError, TypeError, ZeroDivisionError):
+            pass
+    else:
+        st.markdown("""
+        <div style='margin-top:1rem;padding-top:0.8rem;border-top:1px solid #1e1e1e'>
+            <div style='font-family:Space Mono,monospace;font-size:0.58rem;color:#666;text-transform:uppercase;letter-spacing:0.12em'>
+                USO DIARIO · GROQ
+            </div>
+            <div style='font-family:Space Mono,monospace;font-size:0.58rem;color:#444;letter-spacing:0.05em;margin-top:0.3rem'>
+                Corré un scan para ver el uso
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.markdown(f"""
     <div class="roll-tag">
         EST. 2016 · AR<br>
@@ -495,10 +541,18 @@ elif page == "/ Escanear":
         report = generate_report(client["name"], all_data, GROQ_KEY, prev_md)
         progress.progress(1.0, text="COMPLETE ●")
 
+        # Guardar estado de rate limit para el medidor del sidebar
+        if report.get("rate_limit"):
+            st.session_state.last_rate_limit = report["rate_limit"]
+
         if report["status"] == "ok":
             save_report(client["name"], report)
             st.session_state.current_report = report
-            st.success("SCAN COMPLETO · Reporte generado")
+            usage = report.get("usage")
+            if usage:
+                st.success(f"SCAN COMPLETO · Reporte generado · {usage['total_tokens']:,} tokens usados")
+            else:
+                st.success("SCAN COMPLETO · Reporte generado")
         else:
             render_error_card(report['error'])
 

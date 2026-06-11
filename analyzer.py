@@ -69,13 +69,16 @@ def generate_report(
         "status": "ok",
         "report_markdown": "",
         "error": None,
+        "usage": None,        # tokens usados en esta llamada
+        "rate_limit": None,   # estado del límite diario
     }
 
     try:
         client = Groq(api_key=api_key)
         prompt = build_analysis_prompt(client_name, competitors_data, previous_report)
 
-        response = client.chat.completions.create(
+        # with_raw_response permite leer los headers de rate limit
+        raw = client.chat.completions.with_raw_response.create(
             model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -84,7 +87,26 @@ def generate_report(
             temperature=0.4,
             max_tokens=4096,
         )
+        response = raw.parse()
         result["report_markdown"] = response.choices[0].message.content
+
+        # Tokens usados en esta llamada
+        if response.usage:
+            result["usage"] = {
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens,
+            }
+
+        # Estado del límite diario desde los headers
+        h = raw.headers
+        result["rate_limit"] = {
+            "limit_tokens": h.get("x-ratelimit-limit-tokens"),
+            "remaining_tokens": h.get("x-ratelimit-remaining-tokens"),
+            "reset_tokens": h.get("x-ratelimit-reset-tokens"),
+            "limit_requests": h.get("x-ratelimit-limit-requests"),
+            "remaining_requests": h.get("x-ratelimit-remaining-requests"),
+        }
 
     except Exception as e:
         result["status"] = "error"
