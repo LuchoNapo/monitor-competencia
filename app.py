@@ -551,45 +551,52 @@ elif page == "/ Escanear":
         if report.get("rate_limit"):
             st.session_state.last_rate_limit = report["rate_limit"]
 
+        # Guardar estado de Meta para mostrarlo tras el rerun
+        st.session_state.last_meta_status = {
+            "checked": bool(do_meta and META_TOKEN),
+            "errors": meta_errors,
+        }
+
         if report["status"] == "ok":
             save_report(client["name"], report)
             st.session_state.current_report = report
             usage = report.get("usage")
             if usage:
-                st.success(f"SCAN COMPLETO · Reporte generado · {usage['total_tokens']:,} tokens usados")
+                st.session_state.last_scan_msg = f"SCAN COMPLETO · Reporte generado · {usage['total_tokens']:,} tokens usados"
             else:
-                st.success("SCAN COMPLETO · Reporte generado")
+                st.session_state.last_scan_msg = "SCAN COMPLETO · Reporte generado"
+            # Refrescar para que el medidor del sidebar muestre el dato nuevo.
+            # El reporte no se pierde porque vive en session_state.current_report.
+            st.rerun()
         else:
             render_error_card(report['error'])
 
-        # Estado de Meta Ads: ícono discreto en pantalla + detalle en consola (logs)
-        if do_meta and META_TOKEN:
-            if meta_errors:
-                # Log completo a la consola de Streamlit Cloud
-                print("=" * 60)
-                print(f"[META ADS] {len(meta_errors)} error(es) en el scan de {client['name']}:")
-                for err in meta_errors:
-                    print(f"  · {err}")
-                print("=" * 60)
-                # En pantalla: solo un ícono con tooltip
-                st.markdown(
-                    f"<div style='font-family:Space Mono,monospace;font-size:0.62rem;color:#888;letter-spacing:0.1em;margin-top:0.5rem' "
-                    f"title='{len(meta_errors)} avisos de Meta Ads. Agregá ?debug=1 a la URL para ver el detalle.'>"
-                    f"◆ META ADS · sin datos ({len(meta_errors)})</div>",
-                    unsafe_allow_html=True
-                )
-                # Modo debug: si la URL tiene ?debug=1, mostrar el detalle del error
-                if DEBUG_MODE:
-                    with st.expander(f"⚙ DIAGNÓSTICO META ADS · {len(meta_errors)} error(es)", expanded=True):
-                        for err in meta_errors:
-                            st.code(err, language=None)
-            else:
-                # Todo ok
-                st.markdown(
-                    "<div style='font-family:Space Mono,monospace;font-size:0.62rem;color:#1a9d4a;letter-spacing:0.1em;margin-top:0.5rem'>"
-                    "◆ META ADS · OK</div>",
-                    unsafe_allow_html=True
-                )
+    # Estado de Meta Ads (leído de session_state, sobrevive al rerun)
+    meta_status = st.session_state.get("last_meta_status")
+    if meta_status and meta_status.get("checked"):
+        meta_errs = meta_status.get("errors", [])
+        if meta_errs:
+            st.markdown(
+                f"<div style='font-family:Space Mono,monospace;font-size:0.62rem;color:#888;letter-spacing:0.1em;margin-top:0.5rem' "
+                f"title='{len(meta_errs)} avisos de Meta Ads. Agregá ?debug=1 a la URL para ver el detalle.'>"
+                f"◆ META ADS · sin datos ({len(meta_errs)})</div>",
+                unsafe_allow_html=True
+            )
+            if DEBUG_MODE:
+                with st.expander(f"⚙ DIAGNÓSTICO META ADS · {len(meta_errs)} error(es)", expanded=True):
+                    for err in meta_errs:
+                        st.code(err, language=None)
+        else:
+            st.markdown(
+                "<div style='font-family:Space Mono,monospace;font-size:0.62rem;color:#1a9d4a;letter-spacing:0.1em;margin-top:0.5rem'>"
+                "◆ META ADS · OK</div>",
+                unsafe_allow_html=True
+            )
+
+    # Mensaje de éxito del último scan (persistido para sobrevivir al rerun)
+    if st.session_state.get("last_scan_msg"):
+        st.success(st.session_state.last_scan_msg)
+        st.session_state.last_scan_msg = None
 
     if st.session_state.current_report and st.session_state.current_report.get("report_markdown"):
         st.divider()
