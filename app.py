@@ -1,8 +1,14 @@
 import streamlit as st
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from PIL import Image
+
+try:
+    from streamlit_javascript import st_javascript
+    _HAS_JS = True
+except ImportError:
+    _HAS_JS = False
 
 from scrapers.web_scraper import scrape_website
 from scrapers.meta_ads import get_meta_ads
@@ -105,6 +111,31 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# ── Hora local del navegador del usuario ───────────────────────────────────────
+# Detectamos el offset (en minutos) de la zona horaria del navegador una sola vez
+# y lo guardamos en session_state. getTimezoneOffset() devuelve minutos invertidos
+# (ej: Argentina UTC-3 → +180), por eso se niega el valor.
+if "tz_offset_min" not in st.session_state:
+    st.session_state.tz_offset_min = None
+
+if st.session_state.tz_offset_min is None and _HAS_JS:
+    try:
+        offset = st_javascript("new Date().getTimezoneOffset()")
+        # st_javascript devuelve 0 en el primer render; solo guardamos un valor real
+        if isinstance(offset, (int, float)):
+            st.session_state.tz_offset_min = -int(offset)
+    except Exception:
+        pass
+
+def now_local() -> datetime:
+    """Devuelve la hora actual en la zona horaria del navegador del usuario.
+    Si aún no se detectó, cae a Argentina (UTC-3) como default razonable."""
+    off = st.session_state.get("tz_offset_min")
+    if off is None:
+        off = -180  # Argentina UTC-3 por defecto
+    return datetime.now(timezone.utc) + timedelta(minutes=off)
+
 
 # ── Estilos Bound ──────────────────────────────────────────────────────────────
 st.markdown("""
@@ -382,7 +413,7 @@ with st.sidebar:
     st.markdown(f"""
     <div class="roll-tag">
         EST. 2016 · AR<br>
-        REC ● {datetime.now().strftime("%H:%M:%S")}
+        REC ● {now_local().strftime("%H:%M:%S")}
     </div>
     """, unsafe_allow_html=True)
 
@@ -392,7 +423,7 @@ st.markdown(f"""
 <div class="bound-header">
     <div class="eyebrow">Aenima · Inteligencia Competitiva</div>
     <h1>ATALAYA · Monitor</h1>
-    <div class="sub">SCAN / ANALYZE / REPORT &nbsp;·&nbsp; {datetime.now().strftime("%d.%m.%Y")}</div>
+    <div class="sub">SCAN / ANALYZE / REPORT &nbsp;·&nbsp; {now_local().strftime("%d.%m.%Y")}</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -534,7 +565,7 @@ elif page == "/ Escanear":
 
             all_data.append(comp_data)
 
-        save_scan(client["name"], {"scanned_at": datetime.now().isoformat(), "data": all_data})
+        save_scan(client["name"], {"scanned_at": now_local().isoformat(), "data": all_data})
 
         progress.progress(step / total_steps, text="ANALYZING · GROQ PROCESSING...")
         prev = get_last_report(client["name"])
@@ -622,13 +653,13 @@ elif page == "/ Escanear":
         pdf_bytes = generate_pdf(
             client["name"],
             st.session_state.current_report["report_markdown"],
-            datetime.now().strftime("%d.%m.%Y"),
+            now_local().strftime("%d.%m.%Y"),
             client.get("competitors", [])
         )
         st.download_button(
             "↓ DESCARGAR PDF",
             data=pdf_bytes,
-            file_name=f"atalaya_{client['name'].lower().replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.pdf",
+            file_name=f"atalaya_{client['name'].lower().replace(' ','_')}_{now_local().strftime('%Y%m%d')}.pdf",
             mime="application/pdf"
         )
 
