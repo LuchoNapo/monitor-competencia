@@ -338,39 +338,35 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     # ── Medidor de uso diario (Groq) ──
-    rl = st.session_state.get("last_rate_limit")
-    if rl and rl.get("remaining_tokens") and rl.get("limit_tokens"):
-        try:
-            rem   = int(rl["remaining_tokens"])
-            lim   = int(rl["limit_tokens"])
-            usado = lim - rem
-            pct   = max(0, min(100, int(rem / lim * 100)))
-            # Estimar reportes restantes (~12k tokens c/u)
-            reportes_rest = rem // 12000
-            # Color según nivel
-            if pct > 40:
-                barra_color = "#FFFF00"
-            elif pct > 15:
-                barra_color = "#FFA500"
-            else:
-                barra_color = "#FF4444"
+    # Groq free tier: 100.000 tokens/día. El header da el límite por minuto,
+    # así que acumulamos el consumo real de la sesión contra el tope diario.
+    DAILY_LIMIT = 100_000
+    used_today = st.session_state.get("tokens_used_today", 0)
+    if used_today > 0:
+        rem  = max(0, DAILY_LIMIT - used_today)
+        pct  = max(0, min(100, int(rem / DAILY_LIMIT * 100)))
+        reportes_rest = rem // 7000   # ~7k tokens por reporte promedio
+        if pct > 40:
+            barra_color = "#FFFF00"
+        elif pct > 15:
+            barra_color = "#FFA500"
+        else:
+            barra_color = "#FF4444"
 
-            st.markdown(f"""
-            <div style='margin-top:1rem;padding-top:0.8rem;border-top:1px solid #1e1e1e'>
-                <div style='font-family:Space Mono,monospace;font-size:0.58rem;color:#666;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.4rem'>
-                    USO DIARIO · GROQ
-                </div>
-                <div style='background:#1a1a1a;height:6px;width:100%;margin-bottom:0.4rem'>
-                    <div style='background:{barra_color};height:6px;width:{pct}%'></div>
-                </div>
-                <div style='font-family:Space Mono,monospace;font-size:0.58rem;color:#888;letter-spacing:0.05em;line-height:1.6'>
-                    {rem:,} / {lim:,} tokens<br>
-                    ~{reportes_rest} reportes restantes
-                </div>
+        st.markdown(f"""
+        <div style='margin-top:1rem;padding-top:0.8rem;border-top:1px solid #1e1e1e'>
+            <div style='font-family:Space Mono,monospace;font-size:0.58rem;color:#666;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:0.4rem'>
+                USO DIARIO · GROQ
             </div>
-            """, unsafe_allow_html=True)
-        except (ValueError, TypeError, ZeroDivisionError):
-            pass
+            <div style='background:#1a1a1a;height:6px;width:100%;margin-bottom:0.4rem'>
+                <div style='background:{barra_color};height:6px;width:{pct}%'></div>
+            </div>
+            <div style='font-family:Space Mono,monospace;font-size:0.58rem;color:#888;letter-spacing:0.05em;line-height:1.6'>
+                {rem:,} / {DAILY_LIMIT:,} tokens<br>
+                ~{reportes_rest} reportes restantes
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         st.markdown("""
         <div style='margin-top:1rem;padding-top:0.8rem;border-top:1px solid #1e1e1e'>
@@ -562,9 +558,10 @@ elif page == "/ Escanear":
             st.session_state.current_report = report
             usage = report.get("usage")
             if usage:
-                st.session_state.last_scan_msg = f"SCAN COMPLETO · Reporte generado · {usage['total_tokens']:,} tokens usados"
-            else:
-                st.session_state.last_scan_msg = "SCAN COMPLETO · Reporte generado"
+                # Acumular consumo del día y guardar el del último scan
+                st.session_state.tokens_used_today = st.session_state.get("tokens_used_today", 0) + usage["total_tokens"]
+                st.session_state.last_scan_tokens = usage["total_tokens"]
+            st.session_state.last_scan_msg = "ok"
             # Refrescar para que el medidor del sidebar muestre el dato nuevo.
             # El reporte no se pierde porque vive en session_state.current_report.
             st.rerun()
@@ -593,9 +590,21 @@ elif page == "/ Escanear":
                 unsafe_allow_html=True
             )
 
-    # Mensaje de éxito del último scan (persistido para sobrevivir al rerun)
+    # Mensaje de éxito del último scan — sutil, estética Atalaya
     if st.session_state.get("last_scan_msg"):
-        st.success(st.session_state.last_scan_msg)
+        tokens = st.session_state.get("last_scan_tokens")
+        tokens_str = ""
+        if tokens:
+            tokens_str = f"<span style='color:#555;margin-left:0.8rem'>{tokens:,} tk</span>"
+        st.markdown(f"""
+        <div style='display:flex;align-items:center;gap:0.6rem;margin-top:0.5rem;padding:0.7rem 1rem;
+                    border:1px solid #1e1e1e;border-left:2px solid #1a9d4a;background:#0d0d0d'>
+            <span style='color:#1a9d4a;font-size:0.9rem'>●</span>
+            <span style='font-family:Space Mono,monospace;font-size:0.7rem;color:#aaa;
+                         letter-spacing:0.12em;text-transform:uppercase'>Scan completo</span>
+            {tokens_str}
+        </div>
+        """, unsafe_allow_html=True)
         st.session_state.last_scan_msg = None
 
     if st.session_state.current_report and st.session_state.current_report.get("report_markdown"):
