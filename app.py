@@ -113,27 +113,28 @@ st.set_page_config(
 )
 
 # ── Hora local del navegador del usuario ───────────────────────────────────────
-# Detectamos el offset (en minutos) de la zona horaria del navegador una sola vez
-# y lo guardamos en session_state. getTimezoneOffset() devuelve minutos invertidos
-# (ej: Argentina UTC-3 → +180), por eso se niega el valor.
+# getTimezoneOffset() devuelve minutos invertidos (Argentina UTC-3 → 180).
+# st_javascript devuelve None/0 en el primer render, antes de ejecutar el JS;
+# por eso guardamos el offset solo cuando llega un valor confiable, y mientras
+# tanto usamos Argentina (UTC-3) como default.
 if "tz_offset_min" not in st.session_state:
     st.session_state.tz_offset_min = None
 
 if st.session_state.tz_offset_min is None and _HAS_JS:
     try:
-        offset = st_javascript("new Date().getTimezoneOffset()")
-        # st_javascript devuelve 0 en el primer render; solo guardamos un valor real
-        if isinstance(offset, (int, float)):
-            st.session_state.tz_offset_min = -int(offset)
+        raw = st_javascript("new Date().getTimezoneOffset()")
+        # Solo aceptamos un número que NO sea el 0 del primer render.
+        # (offset 0 = UTC/Londres; improbable acá, y casi siempre es el placeholder)
+        if isinstance(raw, (int, float)) and int(raw) != 0:
+            st.session_state.tz_offset_min = -int(raw)
     except Exception:
         pass
 
 def now_local() -> datetime:
-    """Devuelve la hora actual en la zona horaria del navegador del usuario.
-    Si aún no se detectó, cae a Argentina (UTC-3) como default razonable."""
+    """Hora actual en la zona del navegador. Default: Argentina (UTC-3)."""
     off = st.session_state.get("tz_offset_min")
     if off is None:
-        off = -180  # Argentina UTC-3 por defecto
+        off = -180  # Argentina UTC-3 mientras se detecta (o si falla)
     return datetime.now(timezone.utc) + timedelta(minutes=off)
 
 

@@ -14,6 +14,7 @@ META_ADS_URL = "https://graph.facebook.com/v21.0/ads_archive"
 
 # Mapa de códigos de error de Meta a mensajes claros
 META_ERROR_HINTS = {
+    1:   "Error temporal de Meta. Suele resolverse solo en unos minutos. Reintentá más tarde.",
     190: "Token inválido o expirado. Generá uno nuevo en el panel de Meta.",
     200: "El token no tiene permisos suficientes. Falta aprobar scopes de Ads Library.",
     10:  "Permiso insuficiente. Verificá identidad en facebook.com/ID y permisos de la app.",
@@ -27,8 +28,11 @@ def get_meta_ads(
     page_name: str,
     access_token: str,
     country: str = "AR",
-    limit: int = 20
+    limit: int = 20,
+    max_retries: int = 3
 ) -> dict:
+    import time
+
     result = {
         "page_name": page_name,
         "scraped_at": datetime.now().isoformat(),
@@ -49,51 +53,65 @@ def get_meta_ads(
         "access_token": access_token,
     }
 
-    try:
-        resp = requests.get(META_ADS_URL, params=params, timeout=20)
+    # Códigos temporales de Meta que conviene reintentar (1 = unknown error, 2 = service)
+    RETRYABLE_CODES = {1, 2}
 
-        # Capturar el error de Meta ANTES de raise, para leer el código
-        if resp.status_code != 200:
-            try:
-                err = resp.json().get("error", {})
-                code = err.get("code")
-                msg  = err.get("message", "Error desconocido")
-                result["status"] = "error"
-                result["error"] = msg
-                result["error_code"] = code
-                result["error_hint"] = META_ERROR_HINTS.get(code, "")
-            except Exception:
-                result["status"] = "error"
-                result["error"] = f"HTTP {resp.status_code}: {resp.text[:200]}"
+    for intento in range(max_retries):
+        try:
+            resp = requests.get(META_ADS_URL, params=params, timeout=20)
+
+            # Capturar el error de Meta ANTES de raise, para leer el código
+            if resp.status_code != 200:
+                try:
+                    err = resp.json().get("error", {})
+                    code = err.get("code")
+                    msg  = err.get("message", "Error desconocido")
+                    # Si es un error temporal y quedan reintentos, esperar y reintentar
+                    if code in RETRYABLE_CODES and intento < max_retries - 1:
+                        time.sleep(1.5 * (intento + 1))  # backoff: 1.5s, 3s
+                        continue
+                    result["status"] = "error"
+                    result["error"] = msg
+                    result["error_code"] = code
+                    result["error_hint"] = META_ERROR_HINTS.get(code, "")
+                except Exception:
+                    result["status"] = "error"
+                    result["error"] = f"HTTP {resp.status_code}: {resp.text[:200]}"
+                return result
+
+            data = resp.json()
+            ads_raw = data.get("data", [])
+            result["total_found"] = len(ads_raw)
+
+            for ad in ads_raw:
+                def first(lst):
+                    return lst[0] if isinstance(lst, list) and lst else (lst if isinstance(lst, str) else "")
+
+                parsed = {
+                    "page_name": ad.get("page_name", ""),
+                    "title": first(ad.get("ad_creative_link_titles", [])),
+                    "body": first(ad.get("ad_creative_bodies", [])),
+                    "description": first(ad.get("ad_creative_link_descriptions", [])),
+                    "caption": first(ad.get("ad_creative_link_captions", [])),
+                    "start_date": ad.get("ad_delivery_start_time", ""),
+                    "end_date": ad.get("ad_delivery_stop_time", ""),
+                    "snapshot_url": ad.get("ad_snapshot_url", ""),
+                }
+                result["ads"].append(parsed)
+
+            return result  # éxito
+
+        except requests.exceptions.Timeout:
+            if intento < max_retries - 1:
+                time.sleep(1.5 * (intento + 1))
+                continue
+            result["status"] = "error"
+            result["error"] = "Timeout al conectar con Meta"
             return result
-
-        data = resp.json()
-        ads_raw = data.get("data", [])
-        result["total_found"] = len(ads_raw)
-
-        for ad in ads_raw:
-            # Los campos plurales devuelven listas; tomamos el primer elemento
-            def first(lst):
-                return lst[0] if isinstance(lst, list) and lst else (lst if isinstance(lst, str) else "")
-
-            parsed = {
-                "page_name": ad.get("page_name", ""),
-                "title": first(ad.get("ad_creative_link_titles", [])),
-                "body": first(ad.get("ad_creative_bodies", [])),
-                "description": first(ad.get("ad_creative_link_descriptions", [])),
-                "caption": first(ad.get("ad_creative_link_captions", [])),
-                "start_date": ad.get("ad_delivery_start_time", ""),
-                "end_date": ad.get("ad_delivery_stop_time", ""),
-                "snapshot_url": ad.get("ad_snapshot_url", ""),
-            }
-            result["ads"].append(parsed)
-
-    except requests.exceptions.Timeout:
-        result["status"] = "error"
-        result["error"] = "Timeout al conectar con Meta"
-    except Exception as e:
-        result["status"] = "error"
-        result["error"] = str(e)
+        except Exception as e:
+            result["status"] = "error"
+            result["error"] = str(e)
+            return result
 
     return result
 
