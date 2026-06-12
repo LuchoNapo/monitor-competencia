@@ -712,6 +712,6 @@ elif page == "/ Reportes":
                 st.download_button(
                     "↓ DESCARGAR PDF",
                     data=pdf_bytes,
-                    file_name=f"atalaya_{selected_path.split('/')[-1].replace('.json','.pdf')}",
+                    file_name=f"atalaya_{client['name'].lower().replace(' ','_')}_{selected_path}.pdf",
                     mime="application/pdf"
                 )

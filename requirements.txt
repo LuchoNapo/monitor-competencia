@@ -1,5 +1,6 @@
 streamlit>=1.35.0
 streamlit-javascript>=0.1.5
+supabase>=2.0.0
 groq>=0.9.0
 reportlab>=4.0.0
 Pillow>=10.0.0
